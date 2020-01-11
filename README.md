@@ -9,4 +9,4 @@ This project uses Python 3, so be careful not to accidentally use Python 2 if yo
     virtualenv env # or maybe virtualenv-3
     source env/bin/activate
     pip install -r requirements.txt # or maybe pip3
-    FLASK_APP=imageproxy.py flask run
+    FLASK_ENV=development FLASK_APP=imageproxy.py flask run
