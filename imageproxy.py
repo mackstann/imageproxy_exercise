@@ -9,7 +9,13 @@ from flask.json import jsonify
 
 app = Flask(__name__)
 
-TIMEOUT = 5
+try:
+    TIMEOUT = float(os.environ['IMAGEPROXY_TIMEOUT'])
+except KeyError:
+    TIMEOUT = 5
+except ValueError:
+    logging.error('Please set env var IMAGEPROXY_TIMEOUT to a valid number of seconds (decimals allowed)')
+    os._exit(1)
 
 try:
     BASE = os.environ['IMAGEPROXY_BASE'].rstrip('/')
