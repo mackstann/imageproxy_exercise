@@ -1,14 +1,30 @@
 package main
 
 import (
+	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type ImageProxyHandler struct{}
 
 func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
-	res.Write([]byte(path))
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	resp, err := client.Get("https://maps.wikimedia.org" + path)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+
+	res.Write(body)
+
 }
 
 func main() {
