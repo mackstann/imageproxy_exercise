@@ -1,7 +1,9 @@
 package main
 
 import (
-	"io/ioutil"
+	"image"
+	_ "image/jpeg"
+	"image/png"
 	"net/http"
 	"time"
 )
@@ -18,13 +20,23 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	img, _, err := image.Decode(resp.Body)
 	if err != nil {
 		return
 	}
 
-	res.Write(body)
+	// convert to grayscale
+	grayImg := image.NewGray(img.Bounds())
+	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
+		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+			grayImg.Set(x, y, img.At(x, y))
+		}
+	}
 
+	if err := png.Encode(res, grayImg); err != nil {
+		return
+	}
 }
 
 func main() {
