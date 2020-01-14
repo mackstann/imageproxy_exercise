@@ -1,9 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"net/http"
 )
 
+type ImageProxyHandler struct{}
+
+func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	path := req.URL.Path
+	res.Write([]byte(path))
+}
+
 func main() {
-	fmt.Println("hello")
+	http.ListenAndServe(":5000", new(ImageProxyHandler))
 }
