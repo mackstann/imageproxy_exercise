@@ -5,6 +5,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -25,6 +26,13 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	typ := "image/png"
 	if respType, ok := resp.Header["Content-Type"]; ok {
 		typ = respType[0]
+	}
+
+	switch typ {
+	case "image/png", "image/jpeg":
+	default:
+		log.Printf("Content-Type %q not supported", typ)
+		res.WriteHeader(501) // 502 might be more correct?
 	}
 
 	img, _, err := image.Decode(resp.Body)
