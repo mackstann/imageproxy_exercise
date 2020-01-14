@@ -2,8 +2,9 @@ package main
 
 import (
 	"image"
-	_ "image/jpeg"
+	"image/jpeg"
 	"image/png"
+	"io"
 	"net/http"
 	"time"
 )
@@ -21,6 +22,11 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 	defer resp.Body.Close()
 
+	typ := "image/png"
+	if respType, ok := resp.Header["Content-Type"]; ok {
+		typ = respType[0]
+	}
+
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
 		return
@@ -34,7 +40,16 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := png.Encode(res, grayImg); err != nil {
+	encodeFunc := png.Encode
+	if typ == "image/jpeg" {
+		encodeFunc = func(w io.Writer, im image.Image) error {
+			return jpeg.Encode(w, im, nil)
+		}
+	}
+
+	res.Header().Set("Content-Type", typ)
+
+	if err := encodeFunc(res, grayImg); err != nil {
 		return
 	}
 }
