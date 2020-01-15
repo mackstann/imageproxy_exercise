@@ -4,12 +4,9 @@ Code exercise: An http proxy that converts images to grayscale
 
 # How to Build and Run
 
-This project uses Python 3, so be careful not to accidentally use Python 2 if you have it installed.
+This project uses Go and its standard library only; no third-party packages.
 
-    virtualenv env # or maybe virtualenv-3
-    source env/bin/activate
-    pip install -r requirements.txt # or maybe pip3
-    IMAGEPROXY_BASE=https://maps.wikimedia.org/ FLASK_ENV=development FLASK_APP=imageproxy.py flask run
+    go run main.go
 
 Now, find an image you like at maps.wikimedia.org, and replace the scheme/host with `http://localhost:5000`:
 
