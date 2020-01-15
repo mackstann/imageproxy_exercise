@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type ImageProxyHandler struct {
 	Timeout time.Duration
+	Base    string
 }
 
 func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -22,19 +24,24 @@ func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.R
 
 	client := &http.Client{Timeout: handler.Timeout}
 
-	resp, err := client.Get("https://maps.wikimedia.org" + path)
+	resp, err := client.Get(handler.Base + "/" + path)
 	if err != nil {
 		if tErr, ok := err.(net.Error); ok && tErr.Timeout() {
 			log.Printf("Timeout while proxying path %q", path)
 			res.WriteHeader(502) // 503 might be more correct?
 			return
 		}
+
+		// 500 is never ideal, but without more specific error handling, we don't know exactly what kind of
+		// problem happened.
 		log.Printf("Error %q while proxying %q", err.Error(), path)
+		res.WriteHeader(500)
 		return
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
+		log.Printf("HTTP %d while proxying %q", resp.StatusCode, path)
 		res.WriteHeader(resp.StatusCode) // proxy HTTP errors
 		return
 	}
@@ -49,10 +56,13 @@ func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.R
 	default:
 		log.Printf("Content-Type %q not supported", typ)
 		res.WriteHeader(501) // 502 might be more correct?
+		return
 	}
 
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
+		log.Printf("Failed to decode image: %s", err.Error())
+		res.WriteHeader(500)
 		return
 	}
 
@@ -74,6 +84,8 @@ func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.R
 	res.Header().Set("Content-Type", typ)
 
 	if err := encodeFunc(res, grayImg); err != nil {
+		log.Printf("Failed to encode image: %s", err.Error())
+		res.WriteHeader(500)
 		return
 	}
 }
@@ -81,15 +93,22 @@ func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.R
 func main() {
 	handler := new(ImageProxyHandler)
 
-	timeoutSec := 5
+	timeoutMS := 5000
 	if timeoutStr := os.Getenv("IMAGEPROXY_TIMEOUT"); timeoutStr != "" {
 		var err error
-		timeoutSec, err = strconv.Atoi(timeoutStr)
+		timeoutMS, err = strconv.Atoi(timeoutStr)
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatalf("Please set env var IMAGEPROXY_TIMEOUT to a valid number of milliseconds")
 		}
 	}
-	handler.Timeout = time.Duration(timeoutSec) * time.Second
+	handler.Timeout = time.Duration(timeoutMS) * time.Millisecond
+
+	base := os.Getenv("IMAGEPROXY_BASE")
+	if base == "" {
+		log.Fatalf("Please set env var IMAGEPROXY_BASE to a valid URL")
+	}
+	base = strings.TrimRight(base, "/")
+	handler.Base = base
 
 	http.ListenAndServe(":5000", handler)
 }
