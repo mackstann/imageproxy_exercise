@@ -17,4 +17,5 @@ Non-supported file types should return appropriate HTTP errors:
 
 * http://localhost:5000/main.css -> 501 Not Implemented
 
-A timeout should return an HTTP 502 Bad Gateway. Set the `IMAGEPROXY_TIMEOUT` env var to `0.001` to exercise this.
+A timeout should return an HTTP 502 Bad Gateway. Set the `IMAGEPROXY_TIMEOUT` env var to `1` to exercise this. (The unit
+is milliseconds.)
