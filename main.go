@@ -8,15 +8,19 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
-type ImageProxyHandler struct{}
+type ImageProxyHandler struct {
+	Timeout time.Duration
+}
 
-func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (handler *ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: handler.Timeout}
 
 	resp, err := client.Get("https://maps.wikimedia.org" + path)
 	if err != nil {
@@ -75,5 +79,17 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	http.ListenAndServe(":5000", new(ImageProxyHandler))
+	handler := new(ImageProxyHandler)
+
+	timeoutSec := 5
+	if timeoutStr := os.Getenv("IMAGEPROXY_TIMEOUT"); timeoutStr != "" {
+		var err error
+		timeoutSec, err = strconv.Atoi(timeoutStr)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+	}
+	handler.Timeout = time.Duration(timeoutSec) * time.Second
+
+	http.ListenAndServe(":5000", handler)
 }
