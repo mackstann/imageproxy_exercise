@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
@@ -19,9 +20,20 @@ func (ImageProxyHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	resp, err := client.Get("https://maps.wikimedia.org" + path)
 	if err != nil {
+		if tErr, ok := err.(net.Error); ok && tErr.Timeout() {
+			log.Printf("Timeout while proxying path %q", path)
+			res.WriteHeader(502) // 503 might be more correct?
+			return
+		}
+		log.Printf("Error %q while proxying %q", err.Error(), path)
 		return
 	}
+
 	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		res.WriteHeader(resp.StatusCode) // proxy HTTP errors
+		return
+	}
 
 	typ := "image/png"
 	if respType, ok := resp.Header["Content-Type"]; ok {
