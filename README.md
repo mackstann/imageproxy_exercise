@@ -4,9 +4,9 @@ Code exercise: An http proxy that converts images to grayscale
 
 # How to Build and Run
 
-This project uses Go and its standard library only; no third-party packages.
-
     go run main.go
+
+This project uses Go and its standard library only; no third-party packages.
 
 Now, find an image you like at maps.wikimedia.org, and replace the scheme/host with `http://localhost:5000`:
 
